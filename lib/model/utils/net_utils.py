@@ -42,7 +42,8 @@ def clip_gradient(model, clip_norm):
         if p.requires_grad:
             modulenorm = p.grad.data.norm()
             totalnorm += modulenorm ** 2
-    totalnorm = torch.sqrt(totalnorm).item()
+    #totalnorm = torch.sqrt(totalnorm).item()
+    totalnorm = np.sqrt(totalnorm)
     norm = (clip_norm / max(totalnorm, clip_norm))
     for p in model.parameters():
         if p.requires_grad:
