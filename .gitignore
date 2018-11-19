@@ -1,5 +1,3 @@
-data/*
-
 # READ THIS BEFORE YOU REFACTOR ME
 #
 # setup.py uses the list of patterns in this file to decide
@@ -7,6 +5,14 @@ data/*
 # if you delete aten/build/ because it's redundant with build/,
 # aten/build/ will stop being cleaned.  So be careful when
 # refactoring this file!
+
+## ignore dataset and pre-trained model
+data/*
+images/*
+## ignore trained detectors
+models/*
+
+
 
 ## PyTorch
 
