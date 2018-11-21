@@ -11,6 +11,8 @@ data/*
 images/*
 ## ignore trained detectors
 models/*
+## ignore output results
+output/*
 
 
 

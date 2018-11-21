@@ -172,6 +172,7 @@ if __name__ == '__main__':
                        'sheep', 'sofa', 'train', 'tvmonitor'])
 
   # initilize the network here.
+  pdb.set_trace()
   if args.net == 'vgg16':
     fasterRCNN = vgg16(pascal_classes, pretrained=False, class_agnostic=args.class_agnostic)
   elif args.net == 'res101':

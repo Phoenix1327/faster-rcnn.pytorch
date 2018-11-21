@@ -194,6 +194,9 @@ if __name__ == '__main__':
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
+  cfg.TRAIN.PER_SUP = 0.2
+
+  pdb.set_trace()
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
   train_size = len(roidb)
 
@@ -321,8 +324,8 @@ if __name__ == '__main__':
 
       loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
            + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
-      #loss_temp += loss.item()
-      loss_temp += loss.data[0]
+      loss_temp += loss.item()
+      #loss_temp += loss.data[0]
 
       # backward
       optimizer.zero_grad()
@@ -337,25 +340,25 @@ if __name__ == '__main__':
           loss_temp /= (args.disp_interval + 1)
 
         if args.mGPUs:
-          #loss_rpn_cls = rpn_loss_cls.mean().item()
-          #loss_rpn_box = rpn_loss_box.mean().item()
-          #loss_rcnn_cls = RCNN_loss_cls.mean().item()
-          #loss_rcnn_box = RCNN_loss_bbox.mean().item()
-          loss_rpn_cls = rpn_loss_cls.mean().data[0]
-          loss_rpn_box = rpn_loss_box.mean().data[0]
-          loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
-          loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
+          loss_rpn_cls = rpn_loss_cls.mean().item()
+          loss_rpn_box = rpn_loss_box.mean().item()
+          loss_rcnn_cls = RCNN_loss_cls.mean().item()
+          loss_rcnn_box = RCNN_loss_bbox.mean().item()
+          #loss_rpn_cls = rpn_loss_cls.mean().data[0]
+          #loss_rpn_box = rpn_loss_box.mean().data[0]
+          #loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
+          #loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
         else:
-          #loss_rpn_cls = rpn_loss_cls.item()
-          #loss_rpn_box = rpn_loss_box.item()
-          #loss_rcnn_cls = RCNN_loss_cls.item()
-          #loss_rcnn_box = RCNN_loss_bbox.item()
-          loss_rpn_cls = rpn_loss_cls.data[0]
-          loss_rpn_box = rpn_loss_box.data[0]
-          loss_rcnn_cls = RCNN_loss_cls.data[0]
-          loss_rcnn_box = RCNN_loss_bbox.data[0]
+          loss_rpn_cls = rpn_loss_cls.item()
+          loss_rpn_box = rpn_loss_box.item()
+          loss_rcnn_cls = RCNN_loss_cls.item()
+          loss_rcnn_box = RCNN_loss_bbox.item()
+          #loss_rpn_cls = rpn_loss_cls.data[0]
+          #loss_rpn_box = rpn_loss_box.data[0]
+          #loss_rcnn_cls = RCNN_loss_cls.data[0]
+          #loss_rcnn_box = RCNN_loss_bbox.data[0]
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
 
@@ -378,7 +381,7 @@ if __name__ == '__main__':
         start = time.time()
 
     
-    save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}_{}.pth'.format(cfg.TRAIN.PER_SUP, args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

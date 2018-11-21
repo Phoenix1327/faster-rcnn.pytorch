@@ -184,14 +184,14 @@ if __name__ == '__main__':
     gt_boxes = gt_boxes.cuda()
 
   # make variable
-  #im_data = Variable(im_data)
-  #im_info = Variable(im_info)
-  #num_boxes = Variable(num_boxes)
-  #gt_boxes = Variable(gt_boxes)
-  im_data = Variable(im_data, volatile=True)
-  im_info = Variable(im_info, volatile=True)
-  num_boxes = Variable(num_boxes, volatile=True)
-  gt_boxes = Variable(gt_boxes, volatile=True)
+  im_data = Variable(im_data)
+  im_info = Variable(im_info)
+  num_boxes = Variable(num_boxes)
+  gt_boxes = Variable(gt_boxes)
+  #im_data = Variable(im_data, volatile=True)
+  #im_info = Variable(im_info, volatile=True)
+  #num_boxes = Variable(num_boxes, volatile=True)
+  #gt_boxes = Variable(gt_boxes, volatile=True)
 
   if args.cuda:
     cfg.CUDA = True
@@ -265,8 +265,8 @@ if __name__ == '__main__':
           # Simply repeat the boxes, once for each class
           pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
-      #pred_boxes /= data[1][0][2].item()
-      pred_boxes /= data[1][0][2]
+      pred_boxes /= data[1][0][2].item()
+      #pred_boxes /= data[1][0][2]
 
       scores = scores.squeeze()
       pred_boxes = pred_boxes.squeeze()

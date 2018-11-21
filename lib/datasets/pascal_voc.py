@@ -12,10 +12,12 @@ import xml.dom.minidom as minidom
 import os
 # import PIL
 import numpy as np
+import random
 import scipy.sparse
 import subprocess
 import math
 import glob
+import pdb
 import uuid
 import scipy.io as sio
 import xml.etree.ElementTree as ET
@@ -24,6 +26,7 @@ from .imdb import imdb
 from .imdb import ROOT_DIR
 from . import ds_utils
 from .voc_eval import voc_eval
+from model.utils.config import cfg
 
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
@@ -39,7 +42,14 @@ except NameError:
 
 class pascal_voc(imdb):
     def __init__(self, image_set, year, devkit_path=None):
-        imdb.__init__(self, 'voc_' + year + '_' + image_set)
+        #pdb.set_trace()
+        if image_set == 'trainval':
+          sup = cfg.TRAIN.PER_SUP
+          imdb.__init__(self, 'voc_' + year + '_' + image_set + '_' + str(sup))
+          self._sup = sup
+        else:
+          imdb.__init__(self, 'voc_' + year + '_' + image_set) 
+
         self._year = year
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
@@ -107,6 +117,13 @@ class pascal_voc(imdb):
             'Path does not exist: {}'.format(image_set_file)
         with open(image_set_file) as f:
             image_index = [x.strip() for x in f.readlines()]
+
+        # selected supervised image files
+        # e.g., self.sup = 0.1
+        #pdb.set_trace()
+        if self._image_set == 'trainval':
+          image_index = random.sample(image_index, int(len(image_index)*self._sup))
+
         return image_index
 
     def _get_default_path(self):
@@ -122,6 +139,7 @@ class pascal_voc(imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        #pdb.set_trace()
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = pickle.load(fid)
@@ -207,6 +225,7 @@ class pascal_voc(imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
+        #pdb.set_trace()
         filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
         tree = ET.parse(filename)
         objs = tree.findall('object')

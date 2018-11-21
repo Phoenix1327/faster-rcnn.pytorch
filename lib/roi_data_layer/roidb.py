@@ -22,7 +22,8 @@ def prepare_roidb(imdb):
   if not (imdb.name.startswith('coco')):
     sizes = [PIL.Image.open(imdb.image_path_at(i)).size
          for i in range(imdb.num_images)]
-         
+  
+  #pdb.set_trace()
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
     roidb[i]['image'] = imdb.image_path_at(i)
@@ -106,6 +107,7 @@ def combined_roidb(imdb_names, training=True):
     return imdb.roidb
   
   def get_roidb(imdb_name):
+    #pdb.set_trace()
     imdb = get_imdb(imdb_name)
     print('Loaded dataset `{:s}` for training'.format(imdb.name))
     imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
@@ -113,6 +115,7 @@ def combined_roidb(imdb_names, training=True):
     roidb = get_training_roidb(imdb)
     return roidb
 
+  #pdb.set_trace()
   roidbs = [get_roidb(s) for s in imdb_names.split('+')]
   roidb = roidbs[0]
 
