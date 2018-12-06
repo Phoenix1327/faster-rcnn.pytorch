@@ -21,6 +21,7 @@ import pdb
 
 class roibatchLoader(data.Dataset):
   def __init__(self, roidb, ratio_list, ratio_index, batch_size, num_classes, training=True, normalize=None):
+    #pdb.set_trace()
     self._roidb = roidb
     self._num_classes = num_classes
     # we make the height of image consistent to trim_height, trim_width
@@ -55,6 +56,7 @@ class roibatchLoader(data.Dataset):
 
 
   def __getitem__(self, index):
+    #pdb.set_trace()
     if self.training:
         index_ratio = int(self.ratio_index[index])
     else:
@@ -213,4 +215,4 @@ class roibatchLoader(data.Dataset):
         return data, im_info, gt_boxes, num_boxes
 
   def __len__(self):
-    return len(self._roidb)
+    return len(self.ratio_list)

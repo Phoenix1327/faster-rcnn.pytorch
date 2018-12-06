@@ -11,6 +11,7 @@ import _init_paths
 import os
 import sys
 import numpy as np
+import random
 import argparse
 import pprint
 import pdb
@@ -194,13 +195,49 @@ if __name__ == '__main__':
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
-  cfg.TRAIN.PER_SUP = 0.2
+  cfg.TRAIN.PER_SUP = 0.5
 
   pdb.set_trace()
-  imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
-  train_size = len(roidb)
+  imdb, ori_roidb, ori_ratio_list, ori_ratio_index = combined_roidb(args.imdb_name)
+  print('{:d} roidb entries'.format(len(ori_roidb)))
 
-  print('{:d} roidb entries'.format(len(roidb)))
+  train_size = len(ori_roidb)
+  ori_roidb_idx = np.arange(train_size)
+  if cfg.TRAIN.USE_FLIPPED:
+      roidb_idx = np.arange(int(train_size/2.0))
+      sampled_roidb_idx = np.random.choice(roidb_idx, size=int(train_size*0.5*cfg.TRAIN.PER_SUP), replace=False)
+      flipped_sampled_roidb_idx = sampled_roidb_idx + int(train_size/2.0)
+      sampled_roidb_idx = np.hstack((sampled_roidb_idx, flipped_sampled_roidb_idx))
+  else:
+      roidb_idx = np.arange(train_size)
+      sampled_roidb_idx = np.random.choice(roidb_idx, size=train_size, replace=False)
+
+  unsup_roidb_idx = np.setdiff1d(ori_roidb_idx, sampled_roidb_idx, assume_unique=True)
+
+
+  #roidb = map(ori_roidb.__getitem__, np.sort(sampled_roidb_idx))
+  #pdb.set_trace()
+  sampled_ratio_list = [ori_ratio_list[idx] for idx, val in enumerate(ori_ratio_index) if np.isin(val, sampled_roidb_idx)]
+  #pdb.set_trace()
+  ratio_list = np.asarray(sampled_ratio_list)
+  sampled_ratio_index = [val for val in ori_ratio_index if np.isin(val, sampled_roidb_idx)]
+  #pdb.set_trace()
+  ratio_index = np.asarray(sampled_ratio_index)
+
+  train_size = ratio_list.shape[0]
+  print('sample semi-supervised {:d} roidb entries. Done!'.format(train_size))
+
+  
+  #unsup_roidb = map(ori_roidb.__getitem__, np.sort(unsup_roidb_idx))
+  unsup_ratio_list = [ori_ratio_list[idx] for idx, val in enumerate(ori_ratio_index) if np.isin(val, unsup_roidb_idx)]
+  unsup_ratio_list = np.asarray(unsup_ratio_list)
+  unsup_ratio_index = [val for val in ori_ratio_index if np.isin(val, unsup_roidb_idx)]
+  unsup_ratio_index = np.asarray(unsup_ratio_index)
+
+  unsup_train_size = unsup_ratio_list.shape[0]
+  print('Remaining unsupervised {:d} roidb entries. Done!'.format(unsup_train_size))
+
+  pdb.set_trace()
 
   output_dir = args.save_dir + "/" + args.net + "/" + args.dataset
   if not os.path.exists(output_dir):
@@ -208,7 +245,7 @@ if __name__ == '__main__':
 
   sampler_batch = sampler(train_size, args.batch_size)
 
-  dataset = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size, \
+  dataset = roibatchLoader(ori_roidb, ratio_list, ratio_index, args.batch_size, \
                            imdb.num_classes, training=True)
 
   dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,

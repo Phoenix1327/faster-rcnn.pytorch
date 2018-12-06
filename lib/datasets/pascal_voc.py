@@ -43,12 +43,15 @@ except NameError:
 class pascal_voc(imdb):
     def __init__(self, image_set, year, devkit_path=None):
         #pdb.set_trace()
+        '''
         if image_set == 'trainval':
           sup = cfg.TRAIN.PER_SUP
           imdb.__init__(self, 'voc_' + year + '_' + image_set + '_' + str(sup))
           self._sup = sup
         else:
-          imdb.__init__(self, 'voc_' + year + '_' + image_set) 
+          imdb.__init__(self, 'voc_' + year + '_' + image_set)
+        '''
+        imdb.__init__(self, 'voc_' + year + '_' + image_set)
 
         self._year = year
         self._image_set = image_set
@@ -121,8 +124,8 @@ class pascal_voc(imdb):
         # selected supervised image files
         # e.g., self.sup = 0.1
         #pdb.set_trace()
-        if self._image_set == 'trainval':
-          image_index = random.sample(image_index, int(len(image_index)*self._sup))
+        #if self._image_set == 'trainval':
+        #  image_index = random.sample(image_index, int(len(image_index)*self._sup))
 
         return image_index
 
