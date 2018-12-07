@@ -197,7 +197,7 @@ if __name__ == '__main__':
   cfg.USE_GPU_NMS = args.cuda
   cfg.TRAIN.PER_SUP = 0.5
 
-  pdb.set_trace()
+  #pdb.set_trace()
   imdb, ori_roidb, ori_ratio_list, ori_ratio_index = combined_roidb(args.imdb_name)
   print('{:d} roidb entries'.format(len(ori_roidb)))
 
@@ -295,14 +295,17 @@ if __name__ == '__main__':
 
   # make variable
   sup_im_data_1 = Variable(sup_im_data_1, requires_grad=True)
+  #sup_im_data_1 = Variable(sup_im_data_1, requires_grad=False)
   sup_im_info_1 = Variable(sup_im_info_1)
   sup_num_boxes_1 = Variable(sup_num_boxes_1)
   sup_gt_boxes_1 = Variable(sup_gt_boxes_1)
   sup_im_data_2 = Variable(sup_im_data_2, requires_grad=True)
+  #sup_im_data_2 = Variable(sup_im_data_2, requires_grad=False)
   sup_im_info_2 = Variable(sup_im_info_2)
   sup_num_boxes_2 = Variable(sup_num_boxes_2)
   sup_gt_boxes_2 = Variable(sup_gt_boxes_2)
   unsup_im_data = Variable(unsup_im_data, requires_grad=True)
+  #unsup_im_data = Variable(unsup_im_data, requires_grad=False)
   unsup_im_info = Variable(unsup_im_info)
   unsup_num_boxes = Variable(unsup_num_boxes)
   unsup_gt_boxes = Variable(unsup_gt_boxes)
@@ -424,7 +427,7 @@ if __name__ == '__main__':
 
     for step in range(iters_per_epoch):
 
-      pdb.set_trace()
+      #pdb.set_trace()
       fasterRCNN_1.zero_grad()
       fasterRCNN_2.zero_grad()
       # supervised datum stream 1
@@ -446,8 +449,12 @@ if __name__ == '__main__':
       unsup_gt_boxes.data.resize_(unsup_data[2].size()).copy_(unsup_data[2])
       unsup_num_boxes.data.resize_(unsup_data[3].size()).copy_(unsup_data[3])
 
+      #print(sup_im_data_1.shape)
+      #print(sup_im_data_2.shape)
+      #print(unsup_im_data.shape)
       #pdb.set_trace()
       epsilon = 0.1
+      #'''
       #generate adversarial examples for fasterRCNN_1
       ####################################################
       sup_rois_1, sup_cls_prob_1, sup_bbox_pred_1, \
@@ -462,6 +469,7 @@ if __name__ == '__main__':
       sup_loss_1.backward()
       sup_im_data_1_grad = torch.sign(sup_im_data_1.grad.data)
       sup_im_data_1_adv = sup_im_data_1.data + epsilon * sup_im_data_1_grad
+      fasterRCNN_1.zero_grad()
 
       #####################################################
       unsup_rois_1, unsup_cls_prob_1, unsup_bbox_pred_1, \
@@ -494,6 +502,7 @@ if __name__ == '__main__':
       sup_loss_2.backward()
       sup_im_data_2_grad = torch.sign(sup_im_data_2.grad.data)
       sup_im_data_2_adv = sup_im_data_2.data + epsilon * sup_im_data_2_grad
+      fasterRCNN_2.zero_grad()
 
       #####################################################
       unsup_rois_2, unsup_cls_prob_2, unsup_bbox_pred_2, \
@@ -510,7 +519,7 @@ if __name__ == '__main__':
       unsup_im_data_2_adv = unsup_im_data.data + epsilon * unsup_im_data_2_grad
       fasterRCNN_2.zero_grad()
       #####################################################
-
+      #'''
 
       # calculate the supervised losses for fasterRCNN_1
       sup_rois_1, sup_cls_prob_1, sup_bbox_pred_1, \
@@ -523,7 +532,8 @@ if __name__ == '__main__':
            + sup_RCNN_loss_cls_1.mean() + sup_RCNN_loss_bbox_1.mean()
 
       loss_temp += sup_loss_1.item()
-      
+
+      #'''
       # calculate the supervised losses for fasterRCNN_2
       sup_rois_2, sup_cls_prob_2, sup_bbox_pred_2, \
       sup_rpn_loss_cls_2, sup_rpn_loss_box_2, \
@@ -535,8 +545,9 @@ if __name__ == '__main__':
            + sup_RCNN_loss_cls_2.mean() + sup_RCNN_loss_bbox_2.mean()
 
       loss_temp += sup_loss_2.item()
+      #'''
 
-
+      #'''
       # calculate the unsupervised jsd loss
       unsup_rois_1, unsup_cls_prob_1, unsup_bbox_pred_1, \
       unsup_rpn_loss_cls_1, unsup_rpn_loss_box_1, \
@@ -558,8 +569,9 @@ if __name__ == '__main__':
       loss_jsd = 0.5 * (kld_p1_m + kld_p2_m)
 
       loss_temp += loss_jsd.item()
+      #'''
 
-
+      #'''
       # Calculate the BCE loss with the real images and adversarial images
       # send the adv images obtained from fasterRCNN_1 to the fasterRCNN_2
       _, sup_cls_prob_advfrom1, _, _, \
@@ -581,7 +593,7 @@ if __name__ == '__main__':
       #  ask the the prediction of fasterRCNN_1 on im_data_1 to be resistant
       #  to that of fasterRCNN_2 on im_data_1_adv
 
-      pdb.set_trace()
+      #pdb.set_trace()
       # 1. sup_cls_prob_1 <--> sup_cls_prob_advfrom1
       loss_dif_sup_12 = sup_cls_prob_advfrom1 * sup_cls_prob_1.log() + (1-sup_cls_prob_advfrom1) * (1-sup_cls_prob_1).log()
       loss_dif_sup_12 = - loss_dif_sup_12.mean()
@@ -598,18 +610,20 @@ if __name__ == '__main__':
       loss_dif = loss_dif_sup_12 + loss_dif_unsup_12 + loss_dif_sup_21 + loss_dif_unsup_21
 
       loss_temp += loss_dif.item()
+      #'''
 
       loss = sup_loss_1 + sup_loss_2 + loss_jsd + loss_dif
+      #loss = sup_loss_1
 
 
 
       # backward
-      pdb.set_trace()
+      #pdb.set_trace()
       optimizer_1.zero_grad()
       optimizer_2.zero_grad()
       loss.backward()
 
-      pdb.set_trace()
+      #pdb.set_trace()
       if args.net == "vgg16":
           clip_gradient(fasterRCNN_1, 10.)
           clip_gradient(fasterRCNN_2, 10.)
@@ -669,6 +683,17 @@ if __name__ == '__main__':
       'epoch': epoch + 1,
       'model': fasterRCNN_1.module.state_dict() if args.mGPUs else fasterRCNN_1.state_dict(),
       'optimizer': optimizer_1.state_dict(),
+      'pooling_mode': cfg.POOLING_MODE,
+      'class_agnostic': args.class_agnostic,
+    }, save_name)
+    print('save model: {}'.format(save_name))
+    
+    save_name = os.path.join(output_dir, 'faster_rcnn_2_{}_{}_{}_{}.pth'.format(cfg.TRAIN.PER_SUP, args.session, epoch, step))
+    save_checkpoint({
+      'session': args.session,
+      'epoch': epoch + 1,
+      'model': fasterRCNN_2.module.state_dict() if args.mGPUs else fasterRCNN_2.state_dict(),
+      'optimizer': optimizer_2.state_dict(),
       'pooling_mode': cfg.POOLING_MODE,
       'class_agnostic': args.class_agnostic,
     }, save_name)
