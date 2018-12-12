@@ -277,6 +277,10 @@ if __name__ == '__main__':
   unsup_im_info = torch.FloatTensor(1)
   unsup_num_boxes = torch.LongTensor(1)
   unsup_gt_boxes = torch.FloatTensor(1)
+  adv_sup_im_data_1 = torch.FloatTensor(1)
+  adv_unsup_im_data_1 = torch.FloatTensor(1)
+  adv_sup_im_data_2 = torch.FloatTensor(1)
+  adv_unsup_im_data_2 = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -292,6 +296,10 @@ if __name__ == '__main__':
     unsup_im_info = unsup_im_info.cuda()
     unsup_num_boxes = unsup_num_boxes.cuda()
     unsup_gt_boxes = unsup_gt_boxes.cuda()
+    adv_sup_im_data_1 = adv_sup_im_data_1.cuda()
+    adv_sup_im_data_2 = adv_sup_im_data_2.cuda()
+    adv_unsup_im_data_1 = adv_unsup_im_data_1.cuda()
+    adv_unsup_im_data_2 = adv_unsup_im_data_2.cuda()
 
   # make variable
   sup_im_data_1 = Variable(sup_im_data_1, requires_grad=True)
@@ -309,6 +317,10 @@ if __name__ == '__main__':
   unsup_im_info = Variable(unsup_im_info)
   unsup_num_boxes = Variable(unsup_num_boxes)
   unsup_gt_boxes = Variable(unsup_gt_boxes)
+  adv_sup_im_data_1 = Variable(adv_sup_im_data_1, requires_grad=False)
+  adv_sup_im_data_2 = Variable(adv_sup_im_data_2, requires_grad=False)
+  adv_unsup_im_data_1 = Variable(adv_unsup_im_data_1, requires_grad=False)
+  adv_unsup_im_data_2 = Variable(adv_unsup_im_data_2, requires_grad=False)
 
   if args.cuda:
     cfg.CUDA = True
@@ -418,7 +430,8 @@ if __name__ == '__main__':
     start = time.time()
 
     if epoch % (args.lr_decay_step + 1) == 0:
-        adjust_learning_rate(optimizer, args.lr_decay_gamma)
+        adjust_learning_rate(optimizer_1, args.lr_decay_gamma)
+        adjust_learning_rate(optimizer_2, args.lr_decay_gamma)
         lr *= args.lr_decay_gamma
 
     sup_data_iter_1 = iter(sup_dataloader_1)
@@ -469,6 +482,7 @@ if __name__ == '__main__':
       sup_loss_1.backward()
       sup_im_data_1_grad = torch.sign(sup_im_data_1.grad.data)
       sup_im_data_1_adv = sup_im_data_1.data + epsilon * sup_im_data_1_grad
+      adv_sup_im_data_1.data.resize_(sup_im_data_1_adv.size()).copy_(sup_im_data_1_adv.data)
       fasterRCNN_1.zero_grad()
 
       #####################################################
@@ -484,6 +498,7 @@ if __name__ == '__main__':
       unsup_loss_1.backward()
       unsup_im_data_1_grad = torch.sign(unsup_im_data.grad.data)
       unsup_im_data_1_adv = unsup_im_data.data + epsilon * unsup_im_data_1_grad
+      adv_unsup_im_data_1.data.resize_(unsup_im_data_1_adv.size()).copy_(unsup_im_data_1_adv.data)
       fasterRCNN_1.zero_grad()
       #####################################################
       
@@ -502,6 +517,7 @@ if __name__ == '__main__':
       sup_loss_2.backward()
       sup_im_data_2_grad = torch.sign(sup_im_data_2.grad.data)
       sup_im_data_2_adv = sup_im_data_2.data + epsilon * sup_im_data_2_grad
+      adv_sup_im_data_2.data.resize_(sup_im_data_2_adv.size()).copy_(sup_im_data_2_adv.data)
       fasterRCNN_2.zero_grad()
 
       #####################################################
@@ -517,6 +533,7 @@ if __name__ == '__main__':
       unsup_loss_2.backward()
       unsup_im_data_2_grad = torch.sign(unsup_im_data.grad.data)
       unsup_im_data_2_adv = unsup_im_data.data + epsilon * unsup_im_data_2_grad
+      adv_unsup_im_data_2.data.resize_(unsup_im_data_2_adv.size()).copy_(unsup_im_data_2_adv.data)
       fasterRCNN_2.zero_grad()
       #####################################################
       #'''
@@ -564,8 +581,8 @@ if __name__ == '__main__':
       # Calculate Jensen-Shannon divergence between unsup_cls_prob_1 & unsup_cls_prob_2
       # JSdiv(p1, p2): 0.5*KLdiv(p1, m) + 0.5*KLdiv(p2, m), where m=0.5*(p1+p2)
       m = 0.5 * (unsup_cls_prob_1 + unsup_cls_prob_2)
-      kld_p1_m = (unsup_cls_prob_1 * (unsup_cls_prob_1.log() - m.log())).sum()
-      kld_p2_m = (unsup_cls_prob_2 * (unsup_cls_prob_2.log() - m.log())).sum()
+      kld_p1_m = (unsup_cls_prob_1 * (unsup_cls_prob_1.clamp(min=1e-7).log() - m.clamp(min=1e-7).log())).sum()
+      kld_p2_m = (unsup_cls_prob_2 * (unsup_cls_prob_2.clamp(min=1e-7).log() - m.clamp(min=1e-7).log())).sum()
       loss_jsd = 0.5 * (kld_p1_m + kld_p2_m)
 
       loss_temp += loss_jsd.item()
@@ -575,18 +592,18 @@ if __name__ == '__main__':
       # Calculate the BCE loss with the real images and adversarial images
       # send the adv images obtained from fasterRCNN_1 to the fasterRCNN_2
       _, sup_cls_prob_advfrom1, _, _, \
-      _, _, _, _ = fasterRCNN_2(sup_im_data_1_adv, sup_im_info_1, \
+      _, _, _, _ = fasterRCNN_2(adv_sup_im_data_1, sup_im_info_1, \
                                 sup_gt_boxes_1, sup_num_boxes_1)
       _, unsup_cls_prob_advfrom1, _, _, \
-      _, _, _, _ = fasterRCNN_2(unsup_im_data_1_adv, unsup_im_info, \
+      _, _, _, _ = fasterRCNN_2(adv_unsup_im_data_1, unsup_im_info, \
                                 unsup_gt_boxes, unsup_num_boxes)
 
       # send the adv images obtained from fasterRCNN_2 to the fasterRCNN_1
       _, sup_cls_prob_advfrom2, _, _, \
-      _, _, _, _ = fasterRCNN_1(sup_im_data_2_adv, sup_im_info_2, \
+      _, _, _, _ = fasterRCNN_1(adv_sup_im_data_2, sup_im_info_2, \
                                 sup_gt_boxes_2, sup_num_boxes_2)
       _, unsup_cls_prob_advfrom2, _, _, \
-      _, _, _, _ = fasterRCNN_1(unsup_im_data_2_adv, unsup_im_info, \
+      _, _, _, _ = fasterRCNN_1(adv_unsup_im_data_2, unsup_im_info, \
                                 unsup_gt_boxes, unsup_num_boxes)
 
       #  For example,
@@ -595,16 +612,16 @@ if __name__ == '__main__':
 
       #pdb.set_trace()
       # 1. sup_cls_prob_1 <--> sup_cls_prob_advfrom1
-      loss_dif_sup_12 = sup_cls_prob_advfrom1 * sup_cls_prob_1.log() + (1-sup_cls_prob_advfrom1) * (1-sup_cls_prob_1).log()
+      loss_dif_sup_12 = sup_cls_prob_advfrom1 * sup_cls_prob_1.clamp(min=1e-7).log() + (1-sup_cls_prob_advfrom1) * (1-sup_cls_prob_1).clamp(min=1e-7).log()
       loss_dif_sup_12 = - loss_dif_sup_12.mean()
       # 2. unsup_cls_prob_1 <--> unsup_cls_prob_advfrom1
-      loss_dif_unsup_12 = unsup_cls_prob_advfrom1 * unsup_cls_prob_1.log() + (1-unsup_cls_prob_advfrom1) * (1-unsup_cls_prob_1).log()
+      loss_dif_unsup_12 = unsup_cls_prob_advfrom1 * unsup_cls_prob_1.clamp(min=1e-7).log() + (1-unsup_cls_prob_advfrom1) * (1-unsup_cls_prob_1).clamp(min=1e-7).log()
       loss_dif_unsup_12 = - loss_dif_unsup_12.mean()
       # 3. sup_cls_prob_2 <--> sup_cls_prob_advfrom2
-      loss_dif_sup_21 = sup_cls_prob_advfrom2 * sup_cls_prob_2.log() + (1-sup_cls_prob_advfrom2) * (1-sup_cls_prob_2).log()
+      loss_dif_sup_21 = sup_cls_prob_advfrom2 * sup_cls_prob_2.clamp(min=1e-7).log() + (1-sup_cls_prob_advfrom2) * (1-sup_cls_prob_2).clamp(min=1e-7).log()
       loss_dif_sup_21 = - loss_dif_sup_21.mean()
       # 4. unsup_cls_prob_2 <--> unsup_cls_prob_advfrom2
-      loss_dif_unsup_21 = unsup_cls_prob_advfrom2 * unsup_cls_prob_2.log() + (1-unsup_cls_prob_advfrom2) * (1-unsup_cls_prob_2).log()
+      loss_dif_unsup_21 = unsup_cls_prob_advfrom2 * unsup_cls_prob_2.clamp(min=1e-7).log() + (1-unsup_cls_prob_advfrom2) * (1-unsup_cls_prob_2).clamp(min=1e-7).log()
       loss_dif_unsup_21 = - loss_dif_unsup_21.mean()
       
       loss_dif = loss_dif_sup_12 + loss_dif_unsup_12 + loss_dif_sup_21 + loss_dif_unsup_21
@@ -612,8 +629,12 @@ if __name__ == '__main__':
       loss_temp += loss_dif.item()
       #'''
 
+      #print("sup_loss_1: {}".format(sup_loss_1.item()))
+      #print("sup_loss_2: {}".format(sup_loss_2.item()))
+      #print("loss_jsd: {}".format(loss_jsd.item()))
+      #print("loss_dif: {}".format(loss_dif.item()))
       loss = sup_loss_1 + sup_loss_2 + loss_jsd + loss_dif
-      #loss = sup_loss_1
+      #loss = sup_loss_1 + sup_loss_2 + loss_jsd
 
 
 
